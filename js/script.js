@@ -42,7 +42,7 @@ d3.json("js/data.json", function(error, data) {
 
     // console.log(theData[stage.abbrv]);
 
-    // console.log(stage.abbrv);
+    console.log(stage.abbrv);
 
     data.legislators.forEach( function(legislator) {
 
@@ -53,28 +53,34 @@ d3.json("js/data.json", function(error, data) {
       // for each legislator's legislative session, add up the number of bills sponsored
       legislator.sessions.forEach( function(session) {
 
-        legislator.spon_total += session.num_int_spon;
+        legislator.spon_total += session.num_Int_spon;
         legislator.num_sessions += 1;
         
         // and the number of his/her bills at that legislative stage
         switch(stage.abbrv) {
           case "1st":
             legislator.stage_total += session.num_1st_spon;
+            console.log(session.num_1st_spon);
             break;
           case "2nd":
             legislator.stage_total += session.num_2nd_spon;
+            console.log(session.num_2nd_spon);
             break;
           case "ref":
-            legislator.stage_total += session.num_ref_spon;
+            legislator.stage_total += session.num_Ref_spon;
+            console.log(session.num_ref_spon);
             break;
           case "3rd":
             legislator.stage_total += session.num_3rd_spon;
+            console.log(session.num_3rd_spon);
             break;
           case "pas":
-            legislator.stage_total += session.num_pas_spon;
+            legislator.stage_total += session.num_Pas_spon;
+            console.log(session.num_pas_spon);
             break;
           case "sig":
-            legislator.stage_total += session.num_sig_spon;
+            legislator.stage_total += session.num_Sig_spon;
+            console.log(session.num_sig_spon);
             break;
         }
       });
