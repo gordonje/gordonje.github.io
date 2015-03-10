@@ -14,5 +14,15 @@
 }
 
 circle {
-    fill: steelblue;
+    opacity: 0.5;
+}
+
+.tt {
+  background-color: white;
+  font-size: 13px;
+  position: absolute;
+  display: none;
+  padding: 8px;
+  box-shadow: 2px 2px 6px #666;
+
 }

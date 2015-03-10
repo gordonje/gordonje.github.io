@@ -11,6 +11,7 @@ SELECT
       , abbr_title as current_abbr_title
       , districts.name::INT as current_district
       , legislative_parties.name as current_party
+      , legislators.is_active
 FROM legislative.legislators
 JOIN legislative.legislator_appointments
 ON legislators.id = legislator_id
