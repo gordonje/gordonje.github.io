@@ -1,12 +1,19 @@
+// TO DO: Figure out what is up with data (probably some double counting in a couple of stages)
+// Figure out what is going on with the domain
+// Add move to the front / move to the back code
+// fix mouseOver position
+// maybe sort the records too?
 
 var margin = {top: 20, right: 20, bottom: 30, left: 100},
     width = $(".chart").width() - margin.left - margin.right,
     height = $(".chart").height() - margin.top - margin.bottom;
 
 var x = d3.scale.linear()
+    .domain([0, 90])
     .range([0, width]);
 
 var y = d3.scale.linear()
+    .domain([0, 90])
     .range([height, 0]);
 
 var color = d3.scale.category10();
@@ -30,87 +37,14 @@ var currStage = "1st";
 
 var theData = {}
 
-d3.json("js/data.json", function(error, data) {
-
-  data.stages.forEach( function(stage) {
-
-    theData[stage.abbrv] = {
-        "name": stage.name
-      , "position": stage.position
-      , "legislators": []
-    };
-
-    // console.log(theData[stage.abbrv]);
-
-    console.log(stage.abbrv);
-
-    data.legislators.forEach( function(legislator) {
-
-      legislator.spon_total = 0;
-      legislator.num_sessions = 0;
-      legislator.stage_total = 0;
-
-      // for each legislator's legislative session, add up the number of bills sponsored
-      legislator.sessions.forEach( function(session) {
-
-        legislator.spon_total += session.num_Int_spon;
-        legislator.num_sessions += 1;
-        
-        // and the number of his/her bills at that legislative stage
-        switch(stage.abbrv) {
-          case "1st":
-            legislator.stage_total += session.num_1st_spon;
-            console.log(session.num_1st_spon);
-            break;
-          case "2nd":
-            legislator.stage_total += session.num_2nd_spon;
-            console.log(session.num_2nd_spon);
-            break;
-          case "ref":
-            legislator.stage_total += session.num_Ref_spon;
-            console.log(session.num_ref_spon);
-            break;
-          case "3rd":
-            legislator.stage_total += session.num_3rd_spon;
-            console.log(session.num_3rd_spon);
-            break;
-          case "pas":
-            legislator.stage_total += session.num_Pas_spon;
-            console.log(session.num_pas_spon);
-            break;
-          case "sig":
-            legislator.stage_total += session.num_Sig_spon;
-            console.log(session.num_sig_spon);
-            break;
-        }
-      });
-      // console.log(legislator);
-      theData[stage.abbrv].legislators.push(legislator);
-    });  
-  });
-
-  //Here we define the domains of the X and Y scales...
-  //... as everything between the lowest and highest values of sponsored and passed.
-  x.domain(d3.extent(data.legislators, function(d) { return d.spon_total; }));
-  y.domain(d3.extent(data.legislators, function(d) { return d.stage_total; }));
-
-  // TO DO: append this to the the date element
-  // console.log(data.last_updated);
-
-  // console.log(theData);
-
-  //Once our data is set, we're safe to call our functions.
+d3.json("js/data2.json", function(error, json) {
+  if (error) return console.warn(error);
+  theData = json;
+  // x.domain(d3.extent(results_leg, function(d) { return d.spon_total; })).nice();
+  // y.domain(d3.extent(results_leg, function(d) { return d.stage_spon_total; })).nice();
   setNav();
-  drawChart();  
-
+  drawChart();
 });
-
-// setNav is where we assign our button events.
-// When any element with the class "btn" is clicked,
-// We ask what it's "val" property is.
-// Since "val" is defined as a corresponding year in our index.html file,
-// We can directly assign that to be the new value of currYear.
-// Then, we update our chart.
 
 // The Bootstrap reference for our button group (markup goes in index.html):
 // http://getbootstrap.com/components/#btn-groups
@@ -126,11 +60,6 @@ function setNav() {
 
 };
 
-// We separated our chart into two fucntions: drawChart() and updateChart()
-// drawChart will only be called once — when the page is loaded.
-// This is where we draw our x and y axis.
-// And since we're not clicking any buttons when the page loads,
-// We'll directly call updateChart(), which is where the circles get drawn on the chart.
 function drawChart() {
 
   svg.append("g")
@@ -159,49 +88,73 @@ function drawChart() {
       updateChart();
 };
 
-// At last, this is where our data gets drawn on the chart.
-
 function updateChart() {
 
-  var data = theData[currStage].legislators;
+  console.log(currStage);
 
-  // console.log(currStage);
+  // nest the legislators in each stage and sum up the bill counts
+  var legSums = d3.nest()
+    .key( function(d) {return d.legislator_id;} )
+    .sortKeys(d3.ascending)
+    .rollup(function(d) {
+      return {
+        spon_total:d3.sum(d, function(g) {return +g.introd_spon_count;}),
+        cospon_total:d3.sum(d, function(g) {return +g.introd_cospon_count}),
+        stage_spon_total:d3.sum(d, function(g) {return +g.stage_spon_count;}),
+        stage_cospon_total:d3.sum(d, function(g) {return +g.stage_cospon_count})
+      };
+    })
+    .map(theData.sessions.filter( function(d) {
+      if (d.stage == currStage) {
+        return d;
+      } 
+    }));
 
-  // console.log(data);
+  results_leg = [];
 
-    // Select all elements classed ".dot"
-    // Assign the data as the value of "data" and match each element to d.Tm.
+  for (legId in legSums) {
+    legSums[legId].id = legId;
+    legSums[legId].last_abbr_title = theData.legislators[legId].last_abbr_title;
+    legSums[legId].name_first = theData.legislators[legId].name_first;
+    legSums[legId].name_last = theData.legislators[legId].name_last;
+    legSums[legId].last_party = theData.legislators[legId].last_party;
+    
+    results_leg.push(legSums[legId]);
+  };
+
+  console.log(results_leg);
+
+// fix this, can it even go here?
+  x.domain(d3.extent(results_leg, function(d) { return d.spon_total; }));
+  y.domain(d3.extent(results_leg, function(d) { return d.stage_spon_total; }));
+
   var legislators = svg.selectAll(".dot")
-      .data(data, function(d) {
+      .data(results_leg, function(d) {
           return d.id;
       });
       
-    // If d.Tm does match any elements classed ".dot",
-    // We create a new one. In other words, it "enters" the chart.
-    // The first time our page loads, no circles with the class name "dot" exist
-    // So we append a new one and give it an cx, cy position based on wins and attendance.
-    // If the circle already exists for that team, we do nothing here.
   legislators.enter()
     .append("circle")
       .attr("class", "dot")
       .attr("r", 7)
       .attr("cx", function(d) { return x(d.spon_total); })
-      .attr("cy", function(d) { return y(d.stage_total); })
+      .attr("cy", function(d) { return y(d.stage_spon_total); })
       .on("mouseover", function(d) {
         $(".tt").html(
-          "<div>" + d.current_abbr_title + ' ' + d.name_first + ' ' + d.name_last + "</div>" +
+          "<div>" + d.last_abbr_title + ' ' + d.name_first + ' ' + d.name_last + "</div>" +
           "<div>Has sponsored " + d.spon_total + " bills</div>" +
-          "<div>" + d.stage_total + " have been " + theData[currStage].name + "</div>"
+          "<div>" + d.stage_spon_total + " have been " + theData.stages[currStage].name + "</div>"
           );
         d3.select(this)
           .classed("active", true)
-          .attr("r", 20);
+          .attr("stroke-width", 2)
+          .attr("stroke", "black")
         $(".tt").show();
       })
       .on("mouseout", function(d) {
         d3.select(this)
           .classed("active", false)
-          .attr("r", 7);
+          .attr("stroke-width", 0)
         $(".tt").hide();
       })
       .on("mousemove", function(d) {
@@ -212,20 +165,12 @@ function updateChart() {
           "left" : left+"px",
           "top" : top+"px"
           });
-      });
+      })
 
-    // By the same token, if an "circle" element with the class name "dot" is already on the page
-    // But the d.Tm property doesn't match anything in the new data,
-    // It "exits".
-    // Exit doesn't actually remove it though.
-    // Exit is just what we use to select the elements that aren't represented in our data.
-    // If we'd like to remove it, we use .remove().
-    // I've left the transition to black in place so you can see it in action.
-    legislators.exit()
       .transition()
       .duration(200)
-      .style("fill", "#000");
-      //.remove();
+      .style("fill", "#000")
+      .remove(); // keep?
 
     // Finally, we want to reassign the position of all elements that alredy exist on the chart
     // AND are represented in the current batch of data.
@@ -233,9 +178,9 @@ function updateChart() {
     legislators.transition()
       .duration(200)
       .attr("cx", function(d) { return x(d.spon_total); })
-      .attr("cy", function(d) { return y(d.stage_total); })
+      .attr("cy", function(d) { return y(d.stage_spon_total); })
       .style("fill", function(d) { 
-        switch(d.current_party) {
+        switch(d.last_party) {
           case "Republican":
             return "red";
             break;
