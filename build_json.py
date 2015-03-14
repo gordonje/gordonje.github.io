@@ -5,6 +5,9 @@ import psycopg2.extras
 from datetime import datetime
 import json
 
+start_time = datetime.now()
+print 'Started at {}'.format(start_time)
+
 # connect to the database, prompt if not provided
 try:
 	db = argv[1]
@@ -23,95 +26,77 @@ except IndexError:
 
 conn_string = "dbname=%(db)s user=%(user)s password=%(password)s" % {"db": db, "user": user, "password": password}
 
-
 output =  {
 	  'last_updated': str(datetime.now())
 	, 'parties': []
-	, 'stages': []
-	, 'legislators': []
+	, 'stages': {}
+	, 'legislators': {}
+	, 'sessions': []
 }
 
-# add an array of parties to top level of the output
 with psycopg2.connect(conn_string) as conn:
 	with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-		cur.execute('''SELECT id, LOWER(name) as name
+
+# populate the parties array in output
+		
+		print "...Getting parties..."
+
+		cur.execute('''SELECT id, name
 						FROM legislative.legislative_parties;''')
 
 		for party in cur.fetchall():
 			output['parties'].append(party)
 
-# add an array of stages to top level of the output
-with psycopg2.connect(conn_string) as conn:
-	with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+# populate the legislators array in output
+
+		print "...Getting distinct legislators..."
+
+		cur.execute(open('sql/select_legislators.sql', 'r').read())
+
+		for leg in cur.fetchall():
+			output['legislators'][leg['id']] = leg
+
+# populate the sessions array in output
+
+		# print "...Getting distinct sessions..."
+
+		# cur.execute('''SELECT id, name::INT as year, display_name as name
+		# 		FROM legislative.sessions;''')
+
+		# for ses in cur.fetchall():
+		# 	output['sessions'].append(ses)
+
+# get each stage
+
 		cur.execute('''SELECT 
-							    id
-							  , display_name as name
-							  , SUBSTRING(LOWER(display_name) from 0 for 4) as abbrv
-							  , position
+						    id
+						  , display_name as name
+						  , SUBSTRING(LOWER(display_name) from 0 for 4) as abbrv
+						  , position
 						FROM bills.os_action_types
 						WHERE display_name IS NOT NULL
 						ORDER BY position;''')
 
 		for stage in cur.fetchall():
-			# for the total number of bills at this stage
-			stage['num_bills'] = 0
 
-			# for each party, add a key to hold the number of bills sponsored by that party at that stage
-			for party in output['parties']:
+			print "...Getting session data for {0}...".format(stage['abbrv'])
 
-				stage['num_' + party['name'] + '_spon'] = 0
+			output['stages'][stage['abbrv']] = stage
 
-			output['stages'].append(stage)
+			cur.execute(open('sql/select_stage_sessions.sql', 'r').read(), {'stage_abbrv': stage['abbrv'], 'stage_id': stage['id']})
+			
+			for session in cur.fetchall():
 
-# add an array of legislators
-with psycopg2.connect(conn_string) as conn:
-	with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-		cur.execute(open('sql/select_legislators.sql', 'r').read())
-
-		# for each legislator, add an array of sessions
-		for leg in cur.fetchall():
-
-			leg["sessions"] = []
-
-			cur.execute(open('sql/select_sessions.sql', 'r').read(), (leg['id'], ))
-
-			# append the sessions of each legislator
-			for ses in cur.fetchall():
-
-				# for each session, get the number of bills sponsored by that legislator that made it to that stage
-				for stage in output['stages']:
-
-					cur.execute(open('sql/count_spon_bills.sql', 'r').read(), {
-						  'legislator_id': leg['id']
-						, 'session_id': ses['session_id']
-						, 'stage_id': stage['id']
-						, 'sponsor_type_id': 15 # "primary" sponsor_type
-					})
-
-					ses['num_' + stage['name'][:3] + '_spon'] = cur.fetchone()['count']
-
-					cur.execute(open('sql/count_spon_bills.sql', 'r').read(), {
-						  'legislator_id': leg['id']
-						, 'session_id': ses['session_id']
-						, 'stage_id': stage['id']
-						, 'sponsor_type_id': 16 # "co-sponsor" sponsor_type
-					})
-
-					ses['num_' + stage['name'][:3] + '_cospon'] = cur.fetchone()['count']
-
-				# for each session, get the number of bills co-sponsored by that legislator that made it to that stage
-
-				leg['sessions'].append(ses)
-
-			output['legislators'].append(leg)
+				output['sessions'].append(session)
 
 
-# write to json_file
-jsonFile = open('js/data.json', 'w')
+# # write to json_file
+jsonFile = open('js/data2.json', 'w')
 jsonFile.write(json.dumps(output))
 jsonFile.close()
 
-
+print "fin."
+print '(Runtime = {0})'.format(datetime.now() - start_time)			
 
 
 
