@@ -1,5 +1,4 @@
 // TO DO: Figure out what is up with data (probably some double counting in a couple of stages)
-// Figure out what is going on with the domain
 // Add move to the front / move to the back code
 // fix mouseOver position
 // maybe sort the records too?
@@ -40,8 +39,7 @@ var theData = {}
 d3.json("js/data2.json", function(error, json) {
   if (error) return console.warn(error);
   theData = json;
-  // x.domain(d3.extent(results_leg, function(d) { return d.spon_total; })).nice();
-  // y.domain(d3.extent(results_leg, function(d) { return d.stage_spon_total; })).nice();
+
   setNav();
   drawChart();
 });
@@ -52,6 +50,7 @@ d3.json("js/data2.json", function(error, json) {
 function setNav() {
 
   $(".btn").on("click", function() {
+
     var val = $(this).attr("val");
     currStage = val;
 
@@ -127,6 +126,8 @@ function updateChart() {
 // fix this, can it even go here?
   x.domain(d3.extent(results_leg, function(d) { return d.spon_total; }));
   y.domain(d3.extent(results_leg, function(d) { return d.stage_spon_total; }));
+
+  d3.select(".y.axis").transition().duration(500).call(yAxis); 
 
   var legislators = svg.selectAll(".dot")
       .data(results_leg, function(d) {
