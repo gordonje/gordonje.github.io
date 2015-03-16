@@ -55,7 +55,7 @@ function setNav() {
     var val = $(this).attr("val");
     currStage = val;
 
-    updateChart();
+    updateScatterplotChart();
   });
 
 };
