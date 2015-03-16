@@ -1,35 +1,36 @@
 // TO DO: Figure out what is up with data (probably some double counting in a couple of stages)
 // Add move to the front / move to the back code
+// Toogle the first stage (then untoggle it when something else is clicked)
 // fix mouseOver position
 // maybe sort the records too?
 
-var margin = {top: 20, right: 20, bottom: 30, left: 100},
-    width = $(".chart").width() - margin.left - margin.right,
-    height = $(".chart").height() - margin.top - margin.bottom;
+var margin1 = {top: 20, right: 20, bottom: 30, left: 30},
+    width1 = $(".scatterplot_chart").width() - margin1.left - margin1.right,
+    height1 = $(".scatterplot_chart").height() - margin1.top - margin1.bottom;
 
-var x = d3.scale.linear()
+var x1 = d3.scale.linear()
     .domain([0, 90])
-    .range([0, width]);
+    .range([0, width1]);
 
-var y = d3.scale.linear()
+var y1 = d3.scale.linear()
     .domain([0, 90])
-    .range([height, 0]);
+    .range([height1, 0]);
 
 var color = d3.scale.category10();
 
-var xAxis = d3.svg.axis()
-    .scale(x)
+var xAxis1 = d3.svg.axis()
+    .scale(x1)
     .orient("bottom");
 
-var yAxis = d3.svg.axis()
-    .scale(y)
+var yAxis1 = d3.svg.axis()
+    .scale(y1)
     .orient("left");
 
-var svg = d3.select(".chart").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+var svg1 = d3.select(".scatterplot_chart").append("svg")
+    .attr("width", width1 + margin1.left + margin1.right)
+    .attr("height", height1 + margin1.top + margin1.bottom)
   .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    .attr("transform", "translate(" + margin1.left + "," + margin1.top + ")");
 
 // initial legislative stage to show when the chart is loaded
 var currStage = "1st";
@@ -41,7 +42,7 @@ d3.json("js/data2.json", function(error, json) {
   theData = json;
 
   setNav();
-  drawChart();
+  drawScatterplotChart();
 });
 
 // The Bootstrap reference for our button group (markup goes in index.html):
@@ -59,22 +60,22 @@ function setNav() {
 
 };
 
-function drawChart() {
+function drawScatterplotChart() {
 
-  svg.append("g")
+  svg1.append("g")
       .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis)
+      .attr("transform", "translate(0," + height1 + ")")
+      .call(xAxis1)
     .append("text")
       .attr("class", "label")
-      .attr("x", width)
+      .attr("x", width1)
       .attr("y", -6)
       .style("text-anchor", "end")
       .text("Bills sponsored");
 
-  svg.append("g")
+  svg1.append("g")
       .attr("class", "y axis")
-      .call(yAxis)
+      .call(yAxis1)
     .append("text")
       .attr("class", "label")
       .attr("transform", "rotate(-90)")
@@ -84,10 +85,10 @@ function drawChart() {
       // TO DO: dynamic y-axis label
       .text("Bills achieved stage");
 
-      updateChart();
+      updateScatterplotChart();
 };
 
-function updateChart() {
+function updateScatterplotChart() {
 
   console.log(currStage);
 
@@ -124,12 +125,12 @@ function updateChart() {
   console.log(results_leg);
 
 // fix this, can it even go here?
-  x.domain(d3.extent(results_leg, function(d) { return d.spon_total; }));
-  y.domain(d3.extent(results_leg, function(d) { return d.stage_spon_total; }));
+  x1.domain(d3.extent(results_leg, function(d) { return d.spon_total; }));
+  y1.domain(d3.extent(results_leg, function(d) { return d.stage_spon_total; }));
 
-  d3.select(".y.axis").transition().duration(500).call(yAxis); 
+  d3.select(".y.axis").transition().duration(500).call(yAxis1); 
 
-  var legislators = svg.selectAll(".dot")
+  var legislators = svg1.selectAll(".dot")
       .data(results_leg, function(d) {
           return d.id;
       });
@@ -138,8 +139,8 @@ function updateChart() {
     .append("circle")
       .attr("class", "dot")
       .attr("r", 7)
-      .attr("cx", function(d) { return x(d.spon_total); })
-      .attr("cy", function(d) { return y(d.stage_spon_total); })
+      .attr("cx", function(d) { return x1(d.spon_total); })
+      .attr("cy", function(d) { return y1(d.stage_spon_total); })
       .on("mouseover", function(d) {
         $(".tt").html(
           "<div>" + d.last_abbr_title + ' ' + d.name_first + ' ' + d.name_last + "</div>" +
@@ -178,8 +179,8 @@ function updateChart() {
     // Here we transition (animate) them to new x,y positions on the page.
     legislators.transition()
       .duration(200)
-      .attr("cx", function(d) { return x(d.spon_total); })
-      .attr("cy", function(d) { return y(d.stage_spon_total); })
+      .attr("cx", function(d) { return x1(d.spon_total); })
+      .attr("cy", function(d) { return y1(d.stage_spon_total); })
       .style("fill", function(d) { 
         switch(d.last_party) {
           case "Republican":

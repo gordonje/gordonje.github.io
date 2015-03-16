@@ -1,7 +1,12 @@
 
-.chart {
+.scatterplot_chart {
   height: 500px;
 }
+
+/*.bar_chart {
+  height: 500px;
+  float: left;
+}*/
 
 .main text {
     font: 10px sans-serif;	
